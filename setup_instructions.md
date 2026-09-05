@@ -76,4 +76,3 @@ source install/setup.bash
 ros2 launch robot_base autonomous_exploration.launch.py
 ```
 
-The robot will automatically open RViz, load the camera, build a 3D map, find frontiers (unknown areas), and autonomously drive towards them to completely map your environment!
