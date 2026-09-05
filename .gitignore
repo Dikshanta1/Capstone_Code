@@ -1,0 +1,27 @@
+# Ignore ROS 2 build & install artifacts
+build/
+install/
+log/
+robot_ws/build/
+robot_ws/install/
+robot_ws/log/
+
+# Notice the leading slash '/' - ignores ONLY root ROS 2 source, keeps robot_ws/src/
+/src/
+
+# Ignore Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore large archives and reference docs
+*.zip
+*.pdf
+ros2.repos
+
+# Ignore IDE & OS temporary files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~

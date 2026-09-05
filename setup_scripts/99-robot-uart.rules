@@ -1,0 +1,4 @@
+# Allow read/write access to Jetson UART ports and USB serial ports
+KERNEL=="ttyTHS0", MODE="0666"
+KERNEL=="ttyTHS1", MODE="0666"
+KERNEL=="ttyUSB*", MODE="0666"

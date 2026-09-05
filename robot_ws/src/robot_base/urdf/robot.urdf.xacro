@@ -1,0 +1,235 @@
+<?xml version="1.0"?>
+<robot name="rover4wd" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============================================================
+       ROBOT PHYSICAL PARAMETERS
+       All values taken directly from measured chassis dimensions.
+       Units: meters, radians.
+       ============================================================ -->
+
+  <!-- Chassis (flat board) -->
+  <xacro:property name="chassis_length" value="0.247"/>   <!-- 24.7 cm -->
+  <xacro:property name="chassis_width"  value="0.16"/>    <!-- 16 cm -->
+  <xacro:property name="chassis_height" value="0.045"/>   <!-- 4.5 cm -->
+  <xacro:property name="chassis_mass"   value="1.2"/>     <!-- placeholder, update once weighed -->
+
+  <!-- Wheels -->
+  <xacro:property name="wheel_radius" value="0.0415"/>    <!-- 8.3 cm diameter / 2 -->
+  <xacro:property name="wheel_width"  value="0.035"/>     <!-- 3.5 cm -->
+  <xacro:property name="wheel_mass"   value="0.15"/>      <!-- placeholder, update once weighed -->
+
+  <!-- Wheel-center offsets (measured from chassis edges) -->
+  <xacro:property name="wheel_from_front" value="0.06"/>   <!-- 6 cm from front edge -->
+  <xacro:property name="wheel_from_back"  value="0.063"/>  <!-- 6.3 cm from back edge -->
+  <xacro:property name="wheel_from_bottom" value="0.022"/> <!-- 2.2 cm from bottom of chassis -->
+  <xacro:property name="wheel_side_gap"   value="0.005"/>  <!-- 0.5 cm gap to chassis side (hex coupling) -->
+
+  <!-- Camera -->
+  <xacro:property name="camera_from_front" value="0.015"/> <!-- 1.5 cm from front edge -->
+  <!-- >>> PLACEHOLDER <<< camera stalk height is NOT yet measured.
+       Tripod removed for the real mount; update this single value once
+       the actual mount height is known and everything else re-derives
+       automatically. -->
+  <xacro:property name="camera_mount_height" value="0.05"/> <!-- PLACEHOLDER: 5 cm guess -->
+  <xacro:property name="camera_mount_radius" value="0.008"/>
+  <xacro:property name="camera_body_diameter" value="0.045"/> <!-- approx, from camera photo -->
+  <xacro:property name="camera_body_depth"    value="0.03"/>
+
+  <!-- ============================================================
+       DERIVED VALUES
+       ============================================================ -->
+  <xacro:property name="half_length" value="${chassis_length/2}"/>
+  <xacro:property name="half_width"  value="${chassis_width/2}"/>
+
+  <!-- Ground clearance under the chassis, derived from wheel radius
+       and how high the wheel centers sit above the chassis bottom -->
+  <xacro:property name="ground_clearance" value="${wheel_radius - wheel_from_bottom}"/>
+  <xacro:property name="chassis_center_z" value="${ground_clearance + chassis_height/2}"/>
+
+  <!-- Wheel center x positions (relative to chassis geometric center) -->
+  <xacro:property name="wheel_x_front" value="${half_length - wheel_from_front}"/>
+  <xacro:property name="wheel_x_rear"  value="${-(half_length - wheel_from_back)}"/>
+
+  <!-- Wheel center y position (relative to chassis centerline) -->
+  <xacro:property name="wheel_y" value="${half_width + wheel_side_gap + wheel_width/2}"/>
+
+  <!-- Wheel center z, relative to base_link (chassis center frame) -->
+  <xacro:property name="wheel_z" value="${wheel_radius - chassis_center_z}"/>
+
+  <!-- Camera x position (relative to chassis center) -->
+  <xacro:property name="camera_x" value="${half_length - camera_from_front}"/>
+
+  <!-- ============================================================
+       MATERIALS
+       ============================================================ -->
+  <material name="carbon_black">
+    <color rgba="0.08 0.08 0.08 1.0"/>
+  </material>
+  <material name="wheel_black">
+    <color rgba="0.05 0.05 0.05 1.0"/>
+  </material>
+  <material name="rim_red">
+    <color rgba="0.6 0.0 0.0 1.0"/>
+  </material>
+  <material name="camera_grey">
+    <color rgba="0.5 0.5 0.5 1.0"/>
+  </material>
+  <material name="mount_silver">
+    <color rgba="0.75 0.75 0.75 1.0"/>
+  </material>
+
+  <!-- ============================================================
+       base_footprint: virtual frame at ground level, directly
+       below the robot's geometric center. Standard ROS convention.
+       ============================================================ -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_to_base_link" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${chassis_center_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================
+       base_link: the flat chassis board
+       ============================================================ -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="carbon_black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="${chassis_mass}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia
+        ixx="${chassis_mass/12*(chassis_width*chassis_width + chassis_height*chassis_height)}"
+        iyy="${chassis_mass/12*(chassis_length*chassis_length + chassis_height*chassis_height)}"
+        izz="${chassis_mass/12*(chassis_length*chassis_length + chassis_width*chassis_width)}"
+        ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- ============================================================
+       WHEEL MACRO
+       ============================================================ -->
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${name}_wheel">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="wheel_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia
+          ixx="${wheel_mass/12*(3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"
+          iyy="${wheel_mass/12*(3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"
+          izz="${wheel_mass/2*wheel_radius*wheel_radius}"
+          ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_wheel"/>
+      <origin xyz="${x} ${y} ${wheel_z}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <dynamics damping="0.1" friction="0.1"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel name="front_left"  x="${wheel_x_front}" y="${wheel_y}"/>
+  <xacro:wheel name="front_right" x="${wheel_x_front}" y="${-wheel_y}"/>
+  <xacro:wheel name="rear_left"   x="${wheel_x_rear}"  y="${wheel_y}"/>
+  <xacro:wheel name="rear_right"  x="${wheel_x_rear}"  y="${-wheel_y}"/>
+
+  <!-- ============================================================
+       CAMERA MOUNT (PLACEHOLDER STALK) + CAMERA BODY
+       Tripod removed from the reference photo; modeled here as a
+       simple vertical cylinder standing up from the chassis top,
+       centered left-right, positioned per the measured front offset.
+       Update camera_mount_height above once the real mount is built.
+       ============================================================ -->
+  <link name="camera_mount_link">
+    <visual>
+      <origin xyz="0 0 ${camera_mount_height/2}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${camera_mount_radius}" length="${camera_mount_height}"/>
+      </geometry>
+      <material name="mount_silver"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${camera_mount_height/2}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${camera_mount_radius}" length="${camera_mount_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.02"/>
+      <origin xyz="0 0 ${camera_mount_height/2}" rpy="0 0 0"/>
+      <inertia ixx="0.00001" iyy="0.00001" izz="0.00001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="camera_mount_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_mount_link"/>
+    <origin xyz="${camera_x} 0 ${chassis_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- camera_link: the RGB-D camera body, sitting on top of the mount. -->
+  <link name="camera_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="${camera_body_diameter/2}" length="${camera_body_depth}"/>
+      </geometry>
+      <material name="camera_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry>
+        <cylinder radius="${camera_body_diameter/2}" length="${camera_body_depth}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.05"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.00002" iyy="0.00002" izz="0.00002" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="camera_mount_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0 0 ${camera_mount_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Optical frame: required by most ROS2 camera drivers / RTAB-Map
+       (REP-103: x-right, y-down, z-forward) -->
+  <link name="camera_optical_frame"/>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+</robot>
